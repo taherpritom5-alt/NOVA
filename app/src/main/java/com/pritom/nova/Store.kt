@@ -22,6 +22,21 @@ class Store(ctx: Context) {
     var backupModel: String
         get() = str("backupModel", "gemini-flash-latest")
         set(v) = put("backupModel", v.trim())
+    var engine: Int
+        get() = p.getInt("engine", 0)
+        set(v) = p.edit().putInt("engine", v).apply()
+    var orKey: String
+        get() = str("orKey").trim()
+        set(v) = put("orKey", v.trim())
+    var orModel: String
+        get() = str("orModel", "deepseek/deepseek-v4-flash:free")
+        set(v) = put("orModel", v.trim())
+    var dsKey: String
+        get() = str("dsKey").trim()
+        set(v) = put("dsKey", v.trim())
+    var dsModel: String
+        get() = str("dsModel", "deepseek-flash")
+        set(v) = put("dsModel", v.trim())
     var lastGood: String
         get() = str("lastGood")
         set(v) = put("lastGood", v)

@@ -48,15 +48,38 @@ class SettingsActivity : Activity() {
             setTextColor(Ui.ACCENT)
         })
 
+        label("⚡ AI ইঞ্জিন")
+        val engineSp = Spinner(this).apply {
+            adapter = Ui.spinnerAdapter(this@SettingsActivity, Brain.engines)
+            setSelection(s.engine)
+        }
+        col.addView(engineSp)
+
+        label("🔑 OpenRouter API key (ফ্রি DeepSeek)")
+        val orKey = field(s.orKey, "sk-or-...", password = true)
+        col.addView(Ui.button(this, "OpenRouter key কোথায় পাব?", Ui.CARD) {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://openrouter.ai/settings/keys")))
+        }, wrap())
+        label("🧠 OpenRouter মডেল")
+        val orModel = field(s.orModel, "deepseek/deepseek-v4-flash:free")
+
+        label("🔑 DeepSeek API key (সরাসরি, পেইড)")
+        val dsKey = field(s.dsKey, "sk-...", password = true)
+        col.addView(Ui.button(this, "DeepSeek key কোথায় পাব?", Ui.CARD) {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://platform.deepseek.com/api_keys")))
+        }, wrap())
+        label("🧠 DeepSeek মডেল")
+        val dsModel = field(s.dsModel, "deepseek-flash")
+
         label("🔑 Gemini API key")
         val key = field(s.apiKey, "এখানে API key পেস্ট করো", password = true)
         col.addView(Ui.button(this, "API key কোথায় পাব?", Ui.CARD) {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://aistudio.google.com/app/apikey")))
         }, wrap())
 
-        label("🧠 মূল মডেল")
+        label("🧠 Gemini মূল মডেল")
         val model = field(s.model, "gemini-flash-lite-latest")
-        label("🧠 বিকল্প মডেল (মূলটা কাজ না করলে)")
+        label("🧠 Gemini বিকল্প মডেল")
         val backup = field(s.backupModel, "gemini-flash-latest")
 
         label("👤 আমার সম্পর্কে")
@@ -99,6 +122,11 @@ class SettingsActivity : Activity() {
 
         col.addView(TextView(this), LinearLayout.LayoutParams(1, dp(20)))
         col.addView(Ui.button(this, "💾 সেভ করো", Ui.GREEN) {
+            s.engine = engineSp.selectedItemPosition
+            s.orKey = orKey.text.toString()
+            s.orModel = orModel.text.toString().ifBlank { "deepseek/deepseek-v4-flash:free" }
+            s.dsKey = dsKey.text.toString()
+            s.dsModel = dsModel.text.toString().ifBlank { "deepseek-flash" }
             s.apiKey = key.text.toString()
             s.model = model.text.toString().ifBlank { "gemini-flash-lite-latest" }
             s.backupModel = backup.text.toString()

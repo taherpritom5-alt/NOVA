@@ -45,8 +45,8 @@ class MainActivity : Activity() {
             if (shown.isNotBlank()) bubble(shown, r == "user")
         }
         when {
-            s.apiKey.isBlank() -> bubble(
-                "হ্যালো প্রিতম! আমি Nova 💜\nশুরু করতে উপরের ⚙ চেপে তোমার Gemini API key বসাও। মেসেজ পড়তে দিতে চাইলে সেখান থেকে Notification access-ও চালু করো।",
+            s.apiKey.isBlank() && s.orKey.isBlank() && s.dsKey.isBlank() -> bubble(
+                "হ্যালো প্রিতম! আমি Nova 💜\nশুরু করতে উপরের ⚙ চেপে একটা AI ইঞ্জিন বেছে তার API key বসাও। মেসেজ পড়তে দিতে চাইলে সেখান থেকে Notification access-ও চালু করো।",
                 false
             )
             s.history().isEmpty() -> bubble("হ্যালো প্রিতম! আমি Nova 💜 বলো, আজ কী করব?", false)
@@ -193,7 +193,7 @@ class MainActivity : Activity() {
         val sys = Prompt.build(s)
         val hist = s.history()
         Thread {
-            val reply = Gemini.chat(s, sys, hist)
+            val reply = Brain.chat(s, sys, hist)
             h.post {
                 chat.removeView(thinking)
                 busy = false
