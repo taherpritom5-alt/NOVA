@@ -22,6 +22,9 @@ class Store(ctx: Context) {
     var backupModel: String
         get() = str("backupModel", "gemini-flash-latest")
         set(v) = put("backupModel", v.trim())
+    var lastGood: String
+        get() = str("lastGood")
+        set(v) = put("lastGood", v)
     var aboutMe: String
         get() = str(
             "aboutMe",

@@ -21,9 +21,21 @@ object Gemini {
             )
         }
 
-        val models = listOf(s.model, s.backupModel).map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        val base = listOf(s.lastGood, s.model, s.backupModel).map { it.trim() }.filter { it.isNotEmpty() }
         var lastErr = "অজানা সমস্যা"
-        for (m in models) {
+        var discovered = false
+        val models = base.distinct().toMutableList()
+        var idx = 0
+        while (idx < models.size || !discovered) {
+            if (idx >= models.size) {
+                discovered = true
+                try {
+                    listModels(s.apiKey).forEach { if (it !in models) models.add(it) }
+                } catch (_: Exception) { }
+                if (idx >= models.size) break
+            }
+            val m = models[idx++]
+            if (idx > 8) break
             val tries = if (s.search) listOf(true, false) else listOf(false)
             for (useSearch in tries) {
                 val body = JSONObject()
@@ -35,7 +47,10 @@ object Gemini {
                     val (code, resp) = post(m, s.apiKey, body.toString())
                     if (code == 200) {
                         val text = parse(resp)
-                        if (text.isNotBlank()) return text
+                        if (text.isNotBlank()) {
+                            s.lastGood = m
+                            return text
+                        }
                         lastErr = "খালি উত্তর এসেছে, আবার চেষ্টা করো।"
                         continue
                     }
@@ -69,6 +84,29 @@ object Gemini {
         return code to text
     }
 
+    /** Ask Google which Gemini text models this key can use; lighter ones first. */
+    private fun listModels(key: String): List<String> {
+        val c = URL("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200").openConnection() as HttpURLConnection
+        c.connectTimeout = 20000
+        c.readTimeout = 30000
+        c.setRequestProperty("x-goog-api-key", key)
+        if (c.responseCode != 200) return emptyList()
+        val js = JSONObject(c.inputStream.bufferedReader().use { it.readText() })
+        val arr = js.optJSONArray("models") ?: return emptyList()
+        val bad = listOf("image", "tts", "audio", "live", "embedding", "vision", "robotics", "computer", "native")
+        val out = mutableListOf<String>()
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            val name = o.optString("name").removePrefix("models/")
+            val methods = o.optJSONArray("supportedGenerationMethods")?.toString() ?: ""
+            if (!methods.contains("generateContent")) continue
+            if (!name.startsWith("gemini") || !name.contains("flash")) continue
+            if (bad.any { name.contains(it) }) continue
+            out.add(name)
+        }
+        return out.sortedWith(compareBy<String>({ if (it.contains("lite")) 0 else 1 }, { if (it.contains("preview") || it.contains("exp")) 1 else 0 }).thenByDescending { it })
+    }
+
     private fun parse(resp: String): String {
         val parts = JSONObject(resp).optJSONArray("candidates")?.optJSONObject(0)
             ?.optJSONObject("content")?.optJSONArray("parts") ?: return ""
@@ -88,7 +126,7 @@ object Gemini {
         } catch (_: Exception) {
         }
         return when {
-            code == 429 -> "আজকের ফ্রি সীমা শেষ, অথবা খুব দ্রুত অনেক প্রশ্ন করা হয়েছে। একটু পরে আবার চেষ্টা করো।"
+            code == 429 -> "কোনো মডেলেই এখন ফ্রি সীমা পাওয়া যাচ্ছে না। একটু পরে আবার চেষ্টা করো।\n(Google: ${msg.take(150)})"
             code == 404 -> "মডেলের নাম ভুল বা বন্ধ হয়ে গেছে। ⚙ সেটিংসে মডেলের নাম বদলাও। ($msg)"
             msg.contains("API key", true) || code == 401 || code == 403 -> "API key সঠিক নয়। ⚙ সেটিংসে আবার বসাও।"
             code >= 500 -> "Google-এর সার্ভার এখন ব্যস্ত, একটু পরে চেষ্টা করো।"
